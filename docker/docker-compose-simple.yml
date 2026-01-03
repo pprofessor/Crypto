@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: crypto-postgres
+    environment:
+      POSTGRES_DB: crypto_exchange
+      POSTGRES_USER: crypto_user
+      POSTGRES_PASSWORD: ChangeMe123!
+    ports:
+      - "5433:5432"
+    networks:
+      - crypto-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: crypto-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - crypto-network
+
+networks:
+  crypto-network:
+    driver: bridge
