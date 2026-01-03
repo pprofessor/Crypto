@@ -1,0 +1,33 @@
+﻿[package]
+name = "wallet-service"
+version = "0.1.0"
+edition = "2021"
+description = "Cryptocurrency wallet management service"
+authors = ["Crypto Options Exchange Team"]
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.4"          # Web framework for Rust
+serde = { version = "1.0", features = ["derive"] } # Serialization/deserialization
+serde_json = "1.0"         # JSON handling
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls"] } # Async PostgreSQL driver
+tokio = { version = "1.35", features = ["full"] } # Async runtime
+uuid = { version = "1.6", features = ["v4", "serde"] } # UUID generation
+chrono = { version = "0.4", features = ["serde"] } # Date and time handling
+dotenv = "0.15"            # Environment variable loading
+config = "0.13"            # Configuration management
+tracing = "0.1"            # Structured logging
+tracing-subscriber = "0.3" # Logging subscriber
+thiserror = "1.0"          # Error handling utilities
+validator = { version = "0.16", features = ["derive"] } # Input validation
+
+[dev-dependencies]
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "migrate"] }
+testcontainers = "0.15"    # For integration testing with containers
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

@@ -1,0 +1,59 @@
+﻿# Development override configuration
+# This file extends the main docker-compose.yml for development
+
+version: '3.8'
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_MULTIPLE_DATABASES: "crypto_options,crypto_options_test"
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/init.sh
+      - ./docker/data/postgres:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+
+  redis:
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+
+  # Development tools (optional)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: crypto-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@crypto.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    volumes:
+      - ./docker/data/pgadmin:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: crypto-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8083:8081"
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

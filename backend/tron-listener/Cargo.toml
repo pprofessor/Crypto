@@ -1,0 +1,33 @@
+﻿[package]
+name = "tron-listener"
+version = "0.1.0"
+edition = "2021"
+description = "TRON blockchain transaction listener"
+authors = ["Crypto Options Exchange Team"]
+license = "MIT"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+tron-rs = "0.3"            # کتابخانه اصلی TRON
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+thiserror = "1.0"
+reqwest = { version = "0.11", features = ["json"] } # برای API calls
+config = "0.13"
+dotenv = "0.15"
+hex = "0.4"
+
+# برای event-driven architecture
+redis = { version = "0.23", features = ["tokio-comp"] }
+
+[dev-dependencies]
+testcontainers = "0.15"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
