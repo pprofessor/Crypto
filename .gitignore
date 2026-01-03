@@ -1,50 +1,54 @@
-﻿# Rust
+﻿# ==================== Rust ====================
+# پوشه کامپایل Rust (بسیار حجیم)
 target/
 **/*.rs.bk
-Cargo.lock
 
-# Node.js
+# ==================== Node.js ====================
+# وابستگی‌های npm/yarn
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.next/
-dist/
+.pnpm-store/
 
-# IDE
+# فایل‌های محیطی (محرمانه)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==================== IDE & Editor ====================
+# VS Code
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs
 .idea/
+*.iml
+
+# ویرایشگرهای متنی
 *.swp
 *.swo
+*~
 
-# OS
+# ==================== سیستم‌عامل ====================
+# فایل‌های سیستمی
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Logs
+# ==================== Docker ====================
+# لاگ‌های Docker
 *.log
-logs/
 
-# Environment variables
-.env
-.env.local
-.env*.local
-
-# Docker
-*.dockerignore
-
-# Build outputs
-build/
-out/
-
-# Database
+# ==================== پروژه خاص ====================
+# دیتابیس توسعه
 *.db
-*.sqlite3
-
-# Backend services
-backend/*/target/
-backend/*/node_modules/
-
-# Frontend
-frontend/.next/
-frontend/node_modules/
+*.sqlite

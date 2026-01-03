@@ -1,0 +1,29 @@
+﻿[workspace]
+# لیست اعضای ورک‌اسپیس (سرویس‌های Rust)
+members = [
+    "backend/wallet-service",
+    "backend/deposit-service", 
+    "backend/tron-listener"
+]
+
+# پروفایل رهیابی (Release) بهینه‌شده
+[profile.release]
+opt-level = 3               # بهینه‌سازی حداکثری
+lto = true                  # بهینه‌سازی لینک‌تایم
+codegen-units = 1          # بهبود بهینه‌سازی
+panic = 'abort'            # کاهش سایز باینری
+strip = true               # حذف اطلاعات دیباگ
+
+# پروفایل توسعه
+[profile.dev]
+opt-level = 0              # کامپایل سریع برای توسعه
+debug = true               # اطلاعات دیباگ فعال
+
+# وابستگی‌های مشترک بین همه سرویس‌ها
+[workspace.dependencies]
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.10"

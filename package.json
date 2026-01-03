@@ -1,0 +1,32 @@
+﻿{
+  "name": "crypto-exchange-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Platform for cryptocurrency options trading with microservices architecture",
+  "workspaces": [
+    "backend/user-service",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:rust": "cargo watch -x run",
+    "build:rust": "cargo build --release",
+    "test:rust": "cargo test",
+    "dev:user-service": "npm run start:dev --workspace=backend/user-service",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:all": "concurrently \"npm run dev:rust\" \"npm run dev:user-service\" \"npm run dev:frontend\"",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down",
+    "db:migrate": "cd backend/user-service && npm run typeorm:run",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "author": "Crypto Exchange Team",
+  "license": "MIT"
+}

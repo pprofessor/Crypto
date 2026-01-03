@@ -1,32 +1,101 @@
 ﻿version: '3.8'
 
 services:
+  # دیتابیس اصلی (PostgreSQL)
   postgres:
     image: postgres:15-alpine
     container_name: crypto-postgres
     environment:
-      POSTGRES_DB: crypto_options
+      POSTGRES_DB: crypto_exchange
       POSTGRES_USER: crypto_user
-      POSTGRES_PASSWORD: crypto_password123
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ChangeMe123!}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - crypto-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U crypto_user"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Redis برای کش و session
   redis:
     image: redis:7-alpine
     container_name: crypto-redis
     ports:
       - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-RedisPass123!}
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # سرویس کاربران (NestJS)
+  user-service:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile.dev
+    container_name: crypto-user-service
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: crypto_user
+      DB_PASSWORD: ${DB_PASSWORD:-ChangeMe123!}
+      DB_DATABASE: crypto_exchange
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-RedisPass123!}
+      JWT_SECRET: ${JWT_SECRET:-YourSuperSecretKeyHere!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/user-service:/app
+      - /app/node_modules
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  # فرانت‌اند (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: crypto-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_WS_URL: ws://localhost:3001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+# شبکه اختصاصی برای ارتباط امن بین سرویس‌ها
+networks:
+  crypto-network:
+    driver: bridge
+
+# حجم‌های دائمی برای داده‌های پایگاه‌داده
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
