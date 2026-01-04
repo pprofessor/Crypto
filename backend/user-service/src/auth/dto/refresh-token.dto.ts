@@ -1,11 +1,7 @@
-﻿import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+﻿import { IsString, IsNotEmpty } from 'class-validator';
 
 export class RefreshTokenDto {
-  @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Refresh token',
-  })
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   refreshToken: string;
 }

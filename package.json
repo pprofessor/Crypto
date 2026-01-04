@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "crypto-exchange-platform",
   "version": "1.0.0",
   "private": true,
@@ -28,5 +28,10 @@
     "npm": ">=9.0.0"
   },
   "author": "Crypto Exchange Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/swagger": "^11.2.3",
+    "swagger-ui-express": "^5.0.1"
+  }
 }

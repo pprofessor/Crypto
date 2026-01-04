@@ -2,7 +2,6 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -16,7 +15,7 @@ import jwtConfig from './config/jwt.config';
       isGlobal: true,
       load: [databaseConfig, jwtConfig],
     }),
-    
+
     // Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -27,35 +26,19 @@ import jwtConfig from './config/jwt.config';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
+        schema: configService.get<string>('database.schema', 'crypto'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
-        logging: configService.get<string>('NODE_ENV') !== 'production',
+        synchronize: configService.get<string>('TYPEORM_SYNCHRONIZE') === 'true' ||
+          configService.get<string>('NODE_ENV') === 'development',
+        logging: configService.get<string>('TYPEORM_LOGGING') === 'true' ||
+          configService.get<string>('NODE_ENV') === 'development',
         migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
-        migrationsRun: true,
+        migrationsRun: false,
+        autoLoadEntities: true,
       }),
       inject: [ConfigService],
     }),
-    
-    // JWT
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('jwt.secret'),
-        signOptions: {
-          expiresIn: configService.get<string>('jwt.expiresIn'),
-        },
-      }),
-      inject: [ConfigService],
-    }),
-    
-    // Rate limiting
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute
-      },
-    ]),
-    
+
     // Feature modules
     AuthModule,
     UsersModule,
@@ -63,4 +46,4 @@ import jwtConfig from './config/jwt.config';
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

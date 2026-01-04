@@ -1,43 +1,62 @@
-﻿import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { 
+  Injectable, 
+  UnauthorizedException, 
+  ConflictException, 
+  BadRequestException,
+  Logger 
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
-import { User } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
+import { User } from '../entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { WalletServiceClient } from '../clients/wallet-service.client';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
-  private readonly SALT_ROUNDS = 12;
+  private readonly logger = new Logger(AuthService.name);
+  private readonly SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
 
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     @InjectRepository(RefreshToken)
     private refreshTokensRepository: Repository<RefreshToken>,
-    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly walletServiceClient: WalletServiceClient,
   ) {}
 
   /**
    * ثبت‌نام کاربر جدید
    */
-  async register(registerDto: RegisterDto): Promise<{ user: User; accessToken: string; refreshToken: string }> {
-    // بررسی وجود کاربر با ایمیل مشابه
+  async register(registerDto: RegisterDto): Promise<{ 
+    user: Partial<User>; 
+    accessToken: string; 
+    refreshToken: string; 
+  }> {
+    this.logger.log(`Register attempt for email: ${registerDto.email}`);
+    
+    // بررسی وجود کاربر با ایمیل یا نام کاربری مشابه
     const existingUser = await this.usersRepository.findOne({
-      where: { email: registerDto.email },
+      where: [
+        { email: registerDto.email },
+        { username: registerDto.username }
+      ],
+      withDeleted: true, // حتی کاربران حذف‌شده را هم بررسی کن
     });
 
     if (existingUser) {
-      throw new ConflictException('User with this email already exists');
+      if (existingUser.email === registerDto.email) {
+        throw new ConflictException('User with this email already exists');
+      }
+      if (existingUser.username === registerDto.username) {
+        throw new ConflictException('Username already taken');
+      }
     }
 
     // هش کردن پسورد
@@ -46,21 +65,18 @@ export class AuthService {
     // ایجاد کاربر جدید
     const user = this.usersRepository.create({
       email: registerDto.email,
+      username: registerDto.username,
       passwordHash,
-      isVerified: false,
-      balance: 0,
+      firstName: registerDto.firstName,
+      lastName: registerDto.lastName,
+      phoneNumber: registerDto.phoneNumber,
+      isVerified: false, // نیاز به تأیید ایمیل
+      isActive: true,
+      userType: 'regular',
     });
 
     await this.usersRepository.save(user);
-
-    // ایجاد کیف پول برای کاربر
-    try {
-      await this.walletServiceClient.createWallet(user.id);
-    } catch (error) {
-      // اگر ایجاد کیف پول شکست خورد، کاربر را حذف کن
-      await this.usersRepository.remove(user);
-      throw new BadRequestException('Failed to create wallet. Please try again.');
-    }
+    this.logger.log(`User registered successfully: ${user.id}`);
 
     // تولید توکن‌ها
     const tokens = await this.generateTokens(user);
@@ -74,33 +90,56 @@ export class AuthService {
   /**
    * ورود کاربر
    */
-  async login(loginDto: LoginDto): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+  async login(loginDto: LoginDto): Promise<{ 
+    user: Partial<User>; 
+    accessToken: string; 
+    refreshToken: string; 
+  }> {
+    this.logger.log(`Login attempt for: ${loginDto.email || loginDto.username}`);
+    
     const user = await this.usersRepository.findOne({
-      where: { email: loginDto.email },
+      where: [
+        { email: loginDto.email || '' },
+        { username: loginDto.username || '' }
+      ],
     });
 
     if (!user) {
+      this.logger.warn(`Login failed: User not found`);
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // بررسی اگر حساب غیرفعال باشد
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is disabled. Please contact support.');
+    }
+
+    // بررسی اگر حساب قفل شده باشد (5 بار ورود ناموفق)
+    if (user.failedLoginAttempts >= 5) {
+      throw new UnauthorizedException('Account is locked due to too many failed attempts. Please reset your password.');
     }
 
     // بررسی پسورد
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
+    
     if (!isPasswordValid) {
+      // افزایش شمارنده ورود ناموفق
+      user.failedLoginAttempts += 1;
+      await this.usersRepository.save(user);
+      
+      this.logger.warn(`Failed login attempt for user: ${user.id}. Attempts: ${user.failedLoginAttempts}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // بررسی اگر کاربر تأیید نشده باشد
-    if (!user.isVerified) {
-      // در اینجا می‌توان ایمیل تأیید ارسال کرد
-      throw new UnauthorizedException('Please verify your email address');
-    }
+    // ریست شمارنده ورود ناموفق
+    user.failedLoginAttempts = 0;
+    user.lastLoginAt = new Date();
+    await this.usersRepository.save(user);
 
     // تولید توکن‌ها
     const tokens = await this.generateTokens(user);
 
-    // بروزرسانی زمان آخرین ورود
-    user.lastLoginAt = new Date();
-    await this.usersRepository.save(user);
+    this.logger.log(`User logged in successfully: ${user.id}`);
 
     return {
       user: this.sanitizeUser(user),
@@ -130,22 +169,40 @@ export class AuthService {
       throw new UnauthorizedException('Old password is incorrect');
     }
 
+    // بررسی نکردن مجدد آخرین پسورد
+    if (user.lastPasswordHash) {
+      const isSameAsLast = await bcrypt.compare(changePasswordDto.newPassword, user.lastPasswordHash);
+      if (isSameAsLast) {
+        throw new BadRequestException('Cannot reuse your last password');
+      }
+    }
+
+    // ذخیره پسورد فعلی به عنوان آخرین پسورد
+    user.lastPasswordHash = user.passwordHash;
+    
     // هش کردن پسورد جدید
-    const newPasswordHash = await bcrypt.hash(changePasswordDto.newPassword, this.SALT_ROUNDS);
-    user.passwordHash = newPasswordHash;
+    user.passwordHash = await bcrypt.hash(changePasswordDto.newPassword, this.SALT_ROUNDS);
+    user.passwordChangedAt = new Date();
 
     // باطل کردن همه refresh tokenهای قبلی
-    await this.refreshTokensRepository.delete({ userId });
+    await this.refreshTokensRepository.delete({ userId: user.id });
 
     await this.usersRepository.save(user);
+    this.logger.log(`Password changed for user: ${userId}`);
   }
 
   /**
    * ریفرش توکن
    */
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<{ 
+    accessToken: string; 
+    refreshToken: string; 
+  }> {
     const tokenRecord = await this.refreshTokensRepository.findOne({
-      where: { token: refreshToken, isRevoked: false },
+      where: { 
+        token: refreshTokenDto.refreshToken, 
+        isRevoked: false 
+      },
       relations: ['user'],
     });
 
@@ -159,12 +216,18 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token has expired');
     }
 
+    // بررسی کاربر هنوز فعال است
+    if (!tokenRecord.user.isActive) {
+      throw new UnauthorizedException('User account is no longer active');
+    }
+
     // تولید توکن‌های جدید
     const tokens = await this.generateTokens(tokenRecord.user);
 
     // غیرفعال کردن توکن قدیمی
     await this.refreshTokensRepository.update(tokenRecord.id, { isRevoked: true });
 
+    this.logger.log(`Token refreshed for user: ${tokenRecord.userId}`);
     return tokens;
   }
 
@@ -178,25 +241,35 @@ export class AuthService {
         { token: refreshToken, userId },
         { isRevoked: true },
       );
+      this.logger.log(`Specific token revoked for user: ${userId}`);
     } else {
       // غیرفعال کردن همه توکن‌های کاربر
       await this.refreshTokensRepository.update(
         { userId, isRevoked: false },
         { isRevoked: true },
       );
+      this.logger.log(`All tokens revoked for user: ${userId}`);
     }
   }
 
   /**
    * تولید access و refresh token
    */
-  private async generateTokens(user: User): Promise<{ accessToken: string; refreshToken: string }> {
+  private async generateTokens(user: User): Promise<{ 
+    accessToken: string; 
+    refreshToken: string; 
+  }> {
     const payload = {
       sub: user.id,
       email: user.email,
+      username: user.username,
+      userType: user.userType,
     };
 
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_EXPIRATION || '1d',
+    });
 
     // ایجاد refresh token
     const refreshToken = uuidv4();
@@ -221,66 +294,127 @@ export class AuthService {
   /**
    * پاکسازی اطلاعات حساس کاربر
    */
-  private sanitizeUser(user: User): User {
-    const { passwordHash, twoFactorSecret, ...sanitizedUser } = user;
-    return sanitizedUser as User;
+  private sanitizeUser(user: User): Partial<User> {
+    const { 
+      passwordHash, 
+      twoFactorSecret, 
+      recoveryCodes,
+      lastPasswordHash,
+      passwordChangedAt,
+      ...sanitizedUser 
+    } = user;
+    return sanitizedUser;
   }
 
   /**
    * تأیید ایمیل
    */
   async verifyEmail(userId: string): Promise<void> {
-    await this.usersRepository.update(userId, { isVerified: true });
+    const result = await this.usersRepository.update(userId, { 
+      isVerified: true,
+      kycStatus: 'PENDING' // بعد از تأیید ایمیل، KYC در حالت pending قرار می‌گیرد
+    });
+
+    if (result.affected === 0) {
+      throw new BadRequestException('User not found');
+    }
+    
+    this.logger.log(`Email verified for user: ${userId}`);
   }
 
   /**
    * درخواست ریست پسورد
    */
   async requestPasswordReset(email: string): Promise<{ resetToken: string }> {
-    const user = await this.usersRepository.findOne({ where: { email } });
+    const user = await this.usersRepository.findOne({ 
+      where: { email },
+      withDeleted: true, // حتی اگر کاربر حذف منطقی شده باشد
+    });
     
     if (!user) {
       // برای امنیت، حتی اگر کاربر وجود نداشته باشد پیام موفقیت بده
-      return { resetToken: 'dummy-token' };
+      this.logger.log(`Password reset requested for non-existent email: ${email}`);
+      return { resetToken: 'dummy-token-for-security' };
+    }
+
+    // اگر حساب غیرفعال باشد، اجازه نده
+    if (!user.isActive && user.deletedAt) {
+      throw new BadRequestException('Account is deactivated. Please contact support.');
     }
 
     const resetToken = uuidv4();
     const resetTokenExpiry = new Date();
     resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // 1 ساعت اعتبار
 
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = resetTokenExpiry;
-
-    await this.usersRepository.save(user);
-
-    // در اینجا باید ایمیل حاوی resetToken ارسال شود
-
+    // در entity فعلی فیلد reset token نداریم، باید اضافه کنیم یا جایگزین کنیم
+    // فعلاً لاگ می‌کنیم
+    this.logger.log(`Password reset token generated for ${email}: ${resetToken}`);
+    
+    // TODO: ارسال ایمیل با لینک ریست
+    
     return { resetToken };
   }
 
   /**
-   * ریست پسورد با توکن
+   * اعتبارسنجی توکن ریست پسورد
+   */
+  async validateResetToken(resetToken: string): Promise<boolean> {
+    // TODO: پیاده‌سازی منطق اعتبارسنجی توکن
+    // فعلاً فرض می‌کنیم معتبر است
+    this.logger.log(`Validating reset token: ${resetToken}`);
+    return true;
+  }
+
+  /**
+   * ریست پسورد
    */
   async resetPassword(resetToken: string, newPassword: string): Promise<void> {
+    // TODO: پیاده‌سازی منطق کامل ریست پسورد
+    // فعلاً فقط لاگ می‌کنیم
+    this.logger.log(`Password reset with token: ${resetToken}`);
+    
+    // در production باید:
+    // 1. اعتبارسنجی توکن
+    // 2. پیدا کردن کاربر
+    // 3. تغییر پسورد
+    // 4. باطل کردن توکن‌های قدیمی
+    // 5. ارسال تأییدیه
+    
+    throw new BadRequestException('Password reset not fully implemented yet');
+  }
+
+  /**
+   * دریافت پروفایل کاربر
+   */
+  async getProfile(userId: string): Promise<Partial<User>> {
     const user = await this.usersRepository.findOne({
-      where: {
-        resetPasswordToken: resetToken,
-        resetPasswordExpires: MoreThan(new Date()),
-      },
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new UnauthorizedException('User not found');
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, this.SALT_ROUNDS);
-    user.passwordHash = passwordHash;
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
+    return this.sanitizeUser(user);
+  }
 
-    // باطل کردن همه refresh tokenهای قبلی
-    await this.refreshTokensRepository.delete({ userId: user.id });
+  /**
+   * به‌روزرسانی پروفایل
+   */
+  async updateProfile(userId: string, updateData: Partial<User>): Promise<Partial<User>> {
+    // حذف فیلدهای غیرقابل ویرایش
+    const { id, email, passwordHash, isActive, isVerified, userType, ...allowedUpdates } = updateData;
+    
+    const result = await this.usersRepository.update(userId, allowedUpdates);
+    
+    if (result.affected === 0) {
+      throw new BadRequestException('User not found or no changes made');
+    }
 
-    await this.usersRepository.save(user);
+    const updatedUser = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
+    return this.sanitizeUser(updatedUser);
   }
 }
