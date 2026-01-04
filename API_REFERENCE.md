@@ -1,273 +1,327 @@
-﻿# API REFERENCE - CRYPTO OPTIONS EXCHANGE
+﻿# 📚 API Reference - Crypto Options Exchange
 
-## 📋 Overview
-This document describes all API endpoints available in the Crypto Options Exchange platform.
+## 🏗️ Base Information
+- **Base URL**: `http://localhost:3001/api`
+- **Content-Type**: `application/json`
+- **Authentication**: Bearer Token (JWT)
 
-## 🔐 Authentication
-All protected endpoints require JWT token in the Authorization header:
-\\\
-Authorization: Bearer <jwt_token>
-\\\
+## 📊 Authentication & User Management
 
----
+### 🔐 Authentication Endpoints
 
-## 👤 USER SERVICE (Port: 3000)
+#### 1. Register User
+POST /auth/register
 
-### Authentication Endpoints
+Request Body:
+{
+  "email": "user@example.com",
+  "username": "john_doe",
+  "password": "SecurePassword123!",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "+989123456789"
+}
 
-#### POST /auth/register
-Register a new user.
+Validation Rules:
+- Email: Valid email format, unique
+- Username: 3-50 chars, letters/numbers/underscore, unique
+- Password: Min 8 chars, uppercase, lowercase, number, special char
+- Phone: Valid international format (optional)
 
-**Request Body:**
-\\\json
+Response:
+{
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "username": "john_doe",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phoneNumber": "+989123456789",
+    "isActive": true,
+    "isVerified": false,
+    "userType": "regular",
+    "createdAt": "2026-01-04T09:00:00.000Z",
+    "updatedAt": "2026-01-04T09:00:00.000Z"
+  },
+  "accessToken": "jwt-token-here",
+  "refreshToken": "refresh-token-here"
+}
+
+#### 2. Login User
+POST /auth/login
+
+Request Body (email OR username):
 {
   "email": "user@example.com",
   "password": "SecurePassword123!"
 }
-\\\
-
-**Response:**
-\\\json
+OR
 {
-  "id": "uuid-v4",
-  "email": "user@example.com",
-  "access_token": "jwt_token",
-  "refresh_token": "refresh_token",
-  "created_at": "2026-01-03T18:40:00Z"
-}
-\\\
-
----
-
-#### POST /auth/login
-Authenticate user and receive tokens.
-
-**Request Body:**
-\\\json
-{
-  "email": "user@example.com",
+  "username": "john_doe",
   "password": "SecurePassword123!"
 }
-\\\
 
-**Response:** Same as register endpoint.
-
----
-
-#### POST /auth/refresh
-Refresh access token using refresh token.
-
-**Request Body:**
-\\\json
+Response:
 {
-  "refresh_token": "refresh_token_string"
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "username": "john_doe",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phoneNumber": "+989123456789",
+    "isActive": true,
+    "isVerified": true,
+    "userType": "regular",
+    "lastLoginAt": "2026-01-04T09:00:00.000Z"
+  },
+  "accessToken": "jwt-token-here",
+  "refreshToken": "refresh-token-here"
 }
-\\\
 
----
+#### 3. Refresh Token
+POST /auth/refresh
 
-#### GET /auth/profile
-Get current user profile (Protected).
-
-**Headers:**
-\\\
-Authorization: Bearer <jwt_token>
-\\\
-
-**Response:**
-\\\json
+Request Body:
 {
-  "id": "uuid-v4",
+  "refreshToken": "refresh-token-from-login"
+}
+
+Response:
+{
+  "accessToken": "new-jwt-token",
+  "refreshToken": "new-refresh-token"
+}
+
+#### 4. Logout
+POST /auth/logout
+Authorization: Bearer <access-token>
+
+Request Body (optional):
+{
+  "refreshToken": "specific-token-to-revoke"
+}
+
+Response: 200 OK
+
+#### 5. Change Password
+POST /auth/change-password
+Authorization: Bearer <access-token>
+
+Request Body:
+{
+  "oldPassword": "CurrentPassword123!",
+  "newPassword": "NewSecurePassword456!"
+}
+
+Response: 200 OK
+
+### 👤 User Profile Endpoints
+
+#### 1. Get Profile
+GET /auth/profile
+Authorization: Bearer <access-token>
+
+Response:
+{
+  "id": "uuid",
   "email": "user@example.com",
-  "is_verified": false,
-  "created_at": "2026-01-03T18:40:00Z",
-  "updated_at": "2026-01-03T18:40:00Z"
+  "username": "john_doe",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "+989123456789",
+  "isActive": true,
+  "isVerified": true,
+  "is2faEnabled": false,
+  "userType": "regular",
+  "kycStatus": "PENDING",
+  "dailyWithdrawalLimit": 1000,
+  "monthlyTradeLimit": 10000,
+  "lastLoginAt": "2026-01-04T09:00:00.000Z",
+  "createdAt": "2026-01-04T09:00:00.000Z",
+  "updatedAt": "2026-01-04T09:00:00.000Z"
 }
-\\\
 
----
+#### 2. Update Profile
+PUT /auth/profile
+Authorization: Bearer <access-token>
 
-## 💰 WALLET SERVICE (Port: 8081)
-
-### Wallet Management
-
-#### POST /wallet/create
-Create a new wallet for user.
-
-**Request Body:**
-\\\json
+Request Body (any fields to update):
 {
-  "user_id": "uuid-v4"
+  "firstName": "John Updated",
+  "lastName": "Doe Updated",
+  "phoneNumber": "+989987654321",
+  "withdrawalWhitelist": ["address1", "address2"]
 }
-\\\
 
-**Response:**
-\\\json
+Response: Updated profile object
+
+#### 3. Verify Email
+POST /auth/verify-email/:token
+
+Response: 200 OK
+
+#### 4. Request Password Reset
+POST /auth/request-password-reset
+
+Request Body:
 {
-  "id": "uuid-v4",
-  "user_id": "uuid-v4",
-  "tron_address": "TXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  "usdt_balance": "0.00000000",
-  "created_at": "2026-01-03T18:40:00Z"
+  "email": "user@example.com"
 }
-\\\
 
----
-
-#### GET /wallet/{user_id}
-Get wallet details for specific user.
-
-**Response:**
-\\\json
+Response:
 {
-  "id": "uuid-v4",
-  "user_id": "uuid-v4",
-  "tron_address": "TXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  "usdt_balance": "100.50000000",
-  "created_at": "2026-01-03T18:40:00Z",
-  "updated_at": "2026-01-03T19:00:00Z"
+  "resetToken": "reset-token-for-email"
 }
-\\\
 
----
+#### 5. Reset Password
+POST /auth/reset-password
 
-#### GET /wallet/balance/{user_id}
-Get current wallet balance.
-
-**Response:**
-\\\json
+Request Body:
 {
-  "user_id": "uuid-v4",
-  "usdt_balance": "100.50000000",
-  "last_updated": "2026-01-03T19:00:00Z"
+  "resetToken": "token-from-email",
+  "newPassword": "NewPassword123!"
 }
-\\\
+
+Response: 200 OK
+
+## 🗃️ Database Schema Reference
+
+### Tables in 'crypto' Schema:
+
+1. **users** - User accounts and profiles
+   - id (UUID, PK)
+   - email (VARCHAR(255), UNIQUE)
+   - username (VARCHAR(50), UNIQUE)
+   - password_hash (VARCHAR(255))
+   - is_active (BOOLEAN)
+   - is_verified (BOOLEAN)
+   - user_type (ENUM: regular, vip, admin)
+   - kyc_status (ENUM: PENDING, VERIFIED, REJECTED)
+   - daily_withdrawal_limit (DECIMAL(30,18))
+   - monthly_trade_limit (DECIMAL(30,18))
+   - created_at, updated_at, deleted_at (TIMESTAMPTZ)
+
+2. **refresh_tokens** - JWT refresh tokens
+   - id (UUID, PK)
+   - token (VARCHAR(255), UNIQUE)
+   - user_id (UUID, FK to users)
+   - expires_at (TIMESTAMPTZ)
+   - is_revoked (BOOLEAN)
+   - ip_address, user_agent, device_info
+
+3. **cryptocurrencies** - Supported currencies
+   - id (SERIAL, PK)
+   - symbol (VARCHAR(10), UNIQUE) - BTC, ETH, TRX, USDT
+   - name (VARCHAR(100))
+   - network (VARCHAR(50))
+   - decimals (INTEGER)
+   - is_active (BOOLEAN)
+
+4. **wallets** - User cryptocurrency wallets
+   - id (UUID, PK)
+   - user_id (UUID, FK to users)
+   - currency_id (INTEGER, FK to cryptocurrencies)
+   - balance (DECIMAL(30,18))
+   - locked_balance (DECIMAL(30,18))
+   - deposit_address (VARCHAR(255), UNIQUE)
+
+5. **transactions** - Financial transactions
+   - id (UUID, PK)
+   - user_id (UUID, FK to users)
+   - wallet_id (UUID, FK to wallets)
+   - currency_id (INTEGER, FK to cryptocurrencies)
+   - amount (DECIMAL(30,18))
+   - type (ENUM: DEPOSIT, WITHDRAWAL, TRADE)
+   - status (ENUM: PENDING, CONFIRMED, FAILED)
+   - created_at (TIMESTAMPTZ)
+
+6. **orders** - Trading orders
+   - id (UUID, PK)
+   - user_id (UUID, FK to users)
+   - base_currency_id (INTEGER, FK to cryptocurrencies)
+   - quote_currency_id (INTEGER, FK to cryptocurrencies)
+   - order_type (ENUM: LIMIT, MARKET)
+   - side (ENUM: BUY, SELL)
+   - price (DECIMAL(30,18))
+   - quantity (DECIMAL(30,18))
+   - status (ENUM: OPEN, FILLED, CANCELLED)
+   - created_at (TIMESTAMPTZ)
+
+## 🔧 Environment Variables
+
+### Required for User-Service:
+PORT=3001
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=5433
+DB_USERNAME=crypto_user
+DB_PASSWORD=ChangeMe123!
+DB_DATABASE=crypto_exchange
+DB_SCHEMA=crypto
+REDIS_HOST=localhost
+REDIS_PORT=6380
+REDIS_PASSWORD=RedisPass123!
+JWT_SECRET=your-secret-key-here
+JWT_EXPIRATION=1d
+REFRESH_TOKEN_SECRET=your-refresh-secret
+REFRESH_TOKEN_EXPIRATION=7d
+BCRYPT_SALT_ROUNDS=10
+
+## 🚀 Quick Start Commands
+
+### Start Database (Podman):
+cd docker && podman-compose -f docker-compose-simple.yml up -d
+
+### Start User-Service:
+cd backend/user-service
+npm install
+npx ts-node src/main.ts
+
+### Test API:
+curl -X POST http://localhost:3001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","username":"testuser","password":"Test@1234"}'
+
+## 📈 Status Codes
+
+- 200: Success
+- 201: Created
+- 400: Bad Request (validation error)
+- 401: Unauthorized (invalid/missing token)
+- 403: Forbidden (insufficient permissions)
+- 404: Not Found
+- 409: Conflict (duplicate email/username)
+- 500: Internal Server Error
+
+## 🔒 Security Notes
+
+1. All passwords are hashed with bcrypt (salt rounds: 10)
+2. JWT tokens expire in 1 day (configurable)
+3. Refresh tokens expire in 7 days
+4. Failed login attempts are tracked (5 attempts locks account)
+5. CORS is configured for http://localhost:3000
+6. Input validation on all endpoints
+7. SQL injection prevention via TypeORM
+
+## 🐛 Troubleshooting
+
+### Database Connection Issues:
+1. Check if PostgreSQL is running: `podman ps | grep postgres`
+2. Test connection: `podman exec crypto-postgres psql -U crypto_user -d crypto_exchange -c "SELECT 1;"`
+3. Verify credentials in .env file
+
+### Service Won't Start:
+1. Check port 3001 is free: `netstat -tulpn | grep 3001`
+2. Verify dependencies: `npm install`
+3. Check TypeScript compilation: `npx tsc --noEmit`
+
+### Authentication Issues:
+1. Verify JWT_SECRET in .env
+2. Check token expiration
+3. Validate password meets complexity requirements
 
 ---
-
-## 💳 DEPOSIT SERVICE (Port: 8082)
-
-### Deposit Management
-
-#### POST /deposit/create
-Create a new deposit request.
-
-**Request Body:**
-\\\json
-{
-  "user_id": "uuid-v4",
-  "amount": "50.00000000",
-  "payment_method": "tron_usdt"
-}
-\\\
-
-**Response:**
-\\\json
-{
-  "id": "uuid-v4",
-  "user_id": "uuid-v4",
-  "amount": "50.00000000",
-  "payment_method": "tron_usdt",
-  "deposit_address": "TXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  "status": "pending",
-  "expires_at": "2026-01-04T18:40:00Z",
-  "created_at": "2026-01-03T18:40:00Z"
-}
-\\\
-
----
-
-#### GET /deposits/{user_id}
-Get all deposits for a user.
-
-**Response:**
-\\\json
-[
-  {
-    "id": "uuid-v4",
-    "user_id": "uuid-v4",
-    "amount": "50.00000000",
-    "payment_method": "tron_usdt",
-    "status": "completed",
-    "transaction_hash": "0x...",
-    "created_at": "2026-01-03T18:40:00Z",
-    "confirmed_at": "2026-01-03T18:45:00Z"
-  }
-]
-\\\
-
----
-
-#### GET /deposit/status/{deposit_id}
-Check status of specific deposit.
-
-**Response:**
-\\\json
-{
-  "id": "uuid-v4",
-  "status": "pending",
-  "confirmations": 2,
-  "required_confirmations": 12,
-  "estimated_completion": "2026-01-03T18:50:00Z"
-}
-\\\
-
----
-
-## 📊 HEALTH CHECKS
-
-#### GET /health (All Services)
-Check service health status.
-
-**Response:**
-\\\json
-{
-  "status": "healthy",
-  "timestamp": "2026-01-03T18:40:00Z",
-  "service": "user-service",
-  "version": "1.0.0-alpha",
-  "database": "connected",
-  "uptime": "5m30s"
-}
-\\\
-
----
-
-## 🚨 ERROR CODES
-
-| Code | Meaning | Description |
-|------|---------|-------------|
-| 200 | OK | Request successful |
-| 201 | Created | Resource created successfully |
-| 400 | Bad Request | Invalid request parameters |
-| 401 | Unauthorized | Authentication required |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource not found |
-| 409 | Conflict | Resource already exists |
-| 422 | Unprocessable Entity | Validation failed |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Server error |
-
----
-
-## 📝 NOTES
-
-1. All amounts are in **USDT** with 8 decimal precision
-2. Timestamps are in ISO 8601 format (UTC)
-3. UUIDs follow version 4 format
-4. JWT tokens expire after 24 hours
-5. Deposit addresses expire after 24 hours
-
----
-
-## 🔄 WEBHOOKS (Future Implementation)
-
-\\\
-POST /webhook/tron/transaction
-POST /webhook/deposit/confirmed
-POST /webhook/withdrawal/processed
-\\\
-
----
-*Last Updated: 2026-01-03*
-*API Version: v1*
+**Last Updated**: 2026-01-04
+**Version**: 2.0.0
+**Maintainer**: Crypto Exchange Development Team

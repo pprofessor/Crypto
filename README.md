@@ -1,239 +1,167 @@
-﻿# 🚀 Crypto Options Exchange
+﻿# 🚀 Crypto Options Exchange Platform
 
-**Professional Cryptocurrency Binary Options Trading Platform**
+یک پلتفرم کامل و امن برای معاملات آپشن ارزهای دیجیتال با معماری میکروسرویس.
 
-## 📋 Project Overview
-A microservices-based trading platform for cryptocurrency binary options, featuring real-time trading, wallet management, and blockchain integration.
+## ✨ ویژگی‌های کلیدی
 
-## 🏗️ Architecture
+- 🔐 **احراز هویت امن**: JWT با refresh token rotation و 2FA
+- 💼 **مدیریت چند ارزی**: پشتیبانی از BTC، ETH، TRX، USDT
+- 🏦 **کیف‌پول امن**: تولید آدرس‌های منحصر به فرد برای هر کاربر
+- 📊 **معاملات واقعی**: موتور تطبیق سفارش با قیمت‌گذاری زنده
+- 🛡️ **امنیت بالا**: bcrypt، rate limiting، validation کامل
+- 🐳 **کانتینری‌شده**: اجرا با Docker/Podman
+- 📱 **فرانت‌اند مدرن**: Next.js 15 با Tailwind CSS
 
-\\\
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   API Gateway   │    │   User Service  │
-│   (Next.js 15)  │◄──►│   (NestJS)      │◄──►│   (NestJS)      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       │              ┌────────┴────────┐
-         │                       │              │                 │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Wallet Service│    │ Deposit Service │    │ Tron Listener   │
-│   (Rust)        │    │ (Rust)          │    │ (Rust)          │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────┬───────────┘                       │
-                     │                                   │
-              ┌─────────────┐                    ┌─────────────┐
-              │ PostgreSQL  │                    │  TRON Node  │
-              │  & Redis    │                    │  Blockchain │
-              └─────────────┘                    └─────────────┘
-\\\
+## 🏗️ معماری فنی
 
-## 🚀 Quick Start
+### میکروسرویس‌ها
+crypto-exchange/
+├── backend/
+│   ├── user-service/        # NestJS - مدیریت کاربران و احراز هویت ✅
+│   ├── wallet-service/      # Rust - مدیریت کیف‌پول‌ها
+│   ├── deposit-service/     # Rust - پردازش واریزها
+│   └── tron-listener/       # Rust - مانیتورینگ بلاکچین
+├── frontend/                # Next.js 15 - رابط کاربری
+├── docker/                  # کانتینرهای Docker/Podman
+├── deployment/              # تنظیمات استقرار تولید
+└── init-db/                 # اسکریپت‌های راه‌اندازی دیتابیس
 
-### Prerequisites
-- Docker & Docker Compose
+### پایگاه داده
+- **PostgreSQL 15**: داده‌های تراکنشی و کاربران
+- **Redis 7**: کش، session، پیام‌رسانی real-time
+- **Schema**: `crypto` با 6 جدول اصلی
+
+## 🚀 شروع سریع
+
+### پیش‌نیازها
 - Node.js 18+
-- Rust 1.70+
-- PostgreSQL 15
+- Rust 1.70+ (برای سرویس‌های مالی)
+- Podman 4.0+ یا Docker
+- PostgreSQL 15 (با Podman خودکار نصب می‌شود)
 
-### Installation
+### نصب و راه‌اندازی
+1. کلون ریپازیتوری:
+git clone https://github.com/pprofessor/Crypto.git
+cd Crypto
 
-1. **Clone the repository**
-   \\\ash
-   git clone https://github.com/pprofessor/crypto-options-exchange.git
-   cd crypto-options-exchange
-   \\\
+2. راه‌اندازی دیتابیس (با Podman):
+cd docker
+podman-compose -f docker-compose-simple.yml up -d
 
-2. **Start infrastructure**
-   \\\ash
-   cd docker
-   docker-compose up -d
-   \\\
+3. راه‌اندازی سرویس کاربران:
+cd backend/user-service
+npm install
+cp .env.example .env  # تنظیم متغیرهای محیطی
+npx ts-node src/main.ts
 
-3. **Setup environment variables**
-   \\\ash
-   cp .env.example .env
-   # Edit .env with your configuration
-   \\\
+4. تست API:
+curl -X POST http://localhost:3001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","username":"testuser","password":"Test@1234"}'
 
-4. **Install dependencies**
-   \\\ash
-   # User Service
-   cd backend/user-service
-   npm install
+## 📚 مستندات کامل
 
-   # Frontend
-   cd ../../frontend
-   npm install
+- [📋 چک‌لیست پیشرفت پروژه](FOR-RUN-CHECKLIST.md) - وضعیت فعلی و نقشه راه
+- [🔧 مرجع API](API_REFERENCE.md) - مستندات کامل endpoints
+- [🗃️ طرح دیتابیس](DATABASE_SCHEMA.md) - جداول و روابط
+- [⚙️ راهنمای استقرار](deployment/setup-ubuntu.sh) - استقرار روی سرور اوبونتو
 
-   # Rust Services
-   cd ../backend/wallet-service
-   cargo build
+## 🔐 APIهای فعلی (آماده)
 
-   cd ../deposit-service
-   cargo build
+### احراز هویت (`/api/auth/*`)
+- `POST /register` - ثبت‌نام کاربر جدید
+- `POST /login` - ورود با ایمیل یا نام کاربری
+- `POST /refresh` - تمدید توکن دسترسی
+- `POST /logout` - خروج و باطل‌سازی توکن
+- `POST /change-password` - تغییر رمز عبور
+- `GET /profile` - دریافت پروفایل کاربر
+- `PUT /profile` - به‌روزرسانی پروفایل
 
-   cd ../tron-listener
-   cargo build
-   \\\
+### وضعیت سرویس
+- `GET /health` - سلامت سرویس (به زودی)
 
-5. **Run database migrations**
-   \\\ash
-   cd backend/user-service
-   npm run migration:run
-   \\\
+## 🗃️ ساختار دیتابیس
 
-6. **Start services**
-   \\\ash
-   # Terminal 1: User Service
-   cd backend/user-service
-   npm run start:dev
+### جداول اصلی:
+1. **users** - اطلاعات کاربران (تأیید هویت، KYC، محدودیت‌ها)
+2. **cryptocurrencies** - ارزهای پشتیبانی‌شده
+3. **wallets** - کیف‌پول‌های کاربران
+4. **transactions** - تراکنش‌های مالی
+5. **orders** - سفارش‌های معاملاتی
+6. **refresh_tokens** - توکن‌های بازنشانی
 
-   # Terminal 2: Wallet Service
-   cd backend/wallet-service
-   cargo run
+## 🛠️ توسعه
 
-   # Terminal 3: Deposit Service
-   cd backend/deposit-service
-   cargo run
+### تنظیمات محیط توسعه
+1. کپی فایل env:
+cd backend/user-service
+cp .env.example .env
 
-   # Terminal 4: Frontend
-   cd frontend
-   npm run dev
-   \\\
+2. ویرایش فایل `.env` با مقادیر مناسب
 
-## 📡 API Documentation
+3. نصب وابستگی‌ها:
+npm install
 
-### Authentication Endpoints
-- \POST /auth/register\ - Register new user
-- \POST /auth/login\ - Login with credentials
-- \POST /auth/logout\ - Logout user
-- \GET /auth/profile\ - Get user profile
+4. راه‌اندازی سرویس:
+npm run start:dev
 
-### Wallet Endpoints
-- \POST /wallet/create\ - Create new wallet
-- \GET /wallet/:user_id\ - Get wallet details
-- \GET /wallet/balance/:user_id\ - Get wallet balance
+### تست
+# تست TypeScript
+npx tsc --noEmit
 
-### Deposit Endpoints
-- \POST /deposit/create\ - Create deposit request
-- \GET /deposits/:user_id\ - Get user deposits
-- \GET /deposit/status/:deposit_id\ - Check deposit status
+# تست API با curl (پس از راه‌اندازی سرویس)
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test@1234"}'
 
-## 🗄️ Database Schema
+## 📊 وضعیت توسعه
 
-### Users Table
-- \id\ UUID PRIMARY KEY
-- \email\ VARCHAR(255) UNIQUE
-- \password_hash\ VARCHAR(255)
-- \is_verified\ BOOLEAN DEFAULT false
-- \created_at\ TIMESTAMP
-- \updated_at\ TIMESTAMP
+### ✅ تکمیل شده
+- [x] ساختار پروژه و ریپازیتوری GitHub
+- [x] راه‌اندازی PostgreSQL و Redis با Podman
+- [x] طراحی کامل schema دیتابیس
+- [x] سرویس کاربران (NestJS) با احراز هویت کامل
+- [x] مستندات API و طرح دیتابیس
+- [x] تنظیمات Docker/Podman
 
-### Wallets Table
-- \id\ UUID PRIMARY KEY
-- \user_id\ UUID REFERENCES users(id)
-- \	ron_address\ VARCHAR(255)
-- \usdt_balance\ DECIMAL(20, 8)
-- \created_at\ TIMESTAMP
+### 🔄 در حال توسعه
+- [ ] سرویس کیف‌پول (Rust)
+- [ ] سرویس واریز (Rust)
+- [ ] فرانت‌اند Next.js
+- [ ] موتور معاملاتی
 
-### Deposits Table
-- \id\ UUID PRIMARY KEY
-- \user_id\ UUID REFERENCES users(id)
-- \mount\ DECIMAL(20, 8)
-- \status\ VARCHAR(50)
-- \	ransaction_hash\ VARCHAR(255)
-- \created_at\ TIMESTAMP
-- \expires_at\ TIMESTAMP
+### ⏳ برنامه‌ریزی شده
+- [ ] تست‌های واحد و یکپارچه‌سازی
+- [ ] سیستم KYC/AML
+- [ ] اعلان‌های real-time
+- [ ] استقرار تولید با SSL
 
-## 🔧 Technology Stack
+## 🤝 مشارکت
 
-### Backend Services
-- **User Service**: NestJS, TypeORM, PostgreSQL, JWT
-- **Wallet Service**: Rust, Actix-web, SQLx, PostgreSQL
-- **Deposit Service**: Rust, Actix-web, SQLx, TRON integration
-- **Tron Listener**: Rust, TRON-RS, PostgreSQL
+1. Fork ریپازیتوری
+2. ایجاد Branch جدید (`git checkout -b feature/AmazingFeature`)
+3. Commit تغییرات (`git commit -m 'Add some AmazingFeature'`)
+4. Push به Branch (`git push origin feature/AmazingFeature`)
+5. باز کردن Pull Request
 
-### Frontend
-- **Framework**: Next.js 15 (App Router)
-- **Styling**: Tailwind CSS, shadcn/ui
-- **State Management**: React Query, Jotai
-- **Charts**: Recharts
-- **Animations**: Framer Motion
+## 📝 لایسنس
 
-### Infrastructure
-- **Database**: PostgreSQL 15
-- **Cache**: Redis
-- **Containerization**: Docker, Docker Compose
-- **Blockchain**: TRON Network
+این پروژه تحت لایسنس MIT منتشر شده است. جزئیات بیشتر در فایل [LICENSE](LICENSE).
 
-## 📊 Development Status
+## 👥 حمایت
 
-| Service | Status | Progress | Notes |
-|---------|--------|----------|-------|
-| User Service | 🟡 In Progress | 85% | JWT auth, user management |
-| Wallet Service | 🟡 In Progress | 70% | Basic wallet operations |
-| Deposit Service | 🟡 In Progress | 60% | TRON deposit processing |
-| Tron Listener | 🔴 Not Started | 0% | Blockchain monitoring |
-| Frontend | 🟡 In Progress | 50% | Dashboard, trading UI |
-| Database | ✅ Complete | 100% | Schema designed |
-| Docker Setup | ✅ Complete | 100% | Multi-container |
+- گزارش باگ یا درخواست قابلیت جدید: [Issues](https://github.com/pprofessor/Crypto/issues)
+- سؤالات فنی: Discussions
+- ایمیل: [اطلاعات تماس]
 
-## 🛡️ Security Features
+## 📞 تماس با ما
 
-- JWT-based authentication with refresh tokens
-- Password hashing with bcrypt
-- SQL injection prevention (parameterized queries)
-- CORS configuration
-- Rate limiting
-- Input validation
-- Environment-based configuration
-- HTTPS enforcement
-
-## 🚧 Roadmap
-
-### Phase 1: Core Infrastructure (Current)
-- [x] Project structure setup
-- [x] Database design
-- [x] Docker configuration
-- [ ] Basic API endpoints
-- [ ] User authentication
-
-### Phase 2: Wallet & Deposits
-- [ ] Wallet creation and management
-- [ ] TRON deposit processing
-- [ ] Transaction monitoring
-- [ ] Balance updates
-
-### Phase 3: Trading Engine
-- [ ] Price feeds integration
-- [ ] Order matching system
-- [ ] P&L calculation
-- [ ] Real-time updates
-
-### Phase 4: Advanced Features
-- [ ] Withdrawal system
-- [ ] Admin dashboard
-- [ ] Analytics and reporting
-- [ ] Multi-chain support
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (\git checkout -b feature/amazing-feature\)
-3. Commit changes (\git commit -m 'Add amazing feature'\)
-4. Push to branch (\git push origin feature/amazing-feature\)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-- **Documentation**: [API Reference](./API_REFERENCE.md)
-- **Issues**: [GitHub Issues](https://github.com/pprofessor/crypto-options-exchange/issues)
-- **Discussion**: [GitHub Discussions](https://github.com/pprofessor/crypto-options-exchange/discussions)
+- **توسعه‌دهنده اصلی**: [اطلاعات شما]
+- **GitHub**: [@pprofessor](https://github.com/pprofessor)
+- **ریپازیتوری**: https://github.com/pprofessor/Crypto
 
 ---
-**Built with ❤️ for the crypto trading community**
+
+**آخرین بروزرسانی**: 2026-01-04  
+**ورژن**: 2.0.0  
+**وضعیت**: در حال توسعه فعال
