@@ -103,4 +103,13 @@ export class AuthController {
   async deleteAccount(@Request() req) {
     return { message: 'Account deletion endpoint - to be implemented' };
   }
+    @Get('test-token')
+  @UseGuards(JwtAuthGuard)
+  async testToken(@Request() req) {
+    return {
+      message: 'Token is valid',
+      user: req.user,
+      timestamp: new Date().toISOString()
+    };
+  }
 }

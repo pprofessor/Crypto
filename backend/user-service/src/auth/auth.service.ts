@@ -1,9 +1,9 @@
-import { 
-  Injectable, 
-  UnauthorizedException, 
-  ConflictException, 
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
   BadRequestException,
-  Logger 
+  Logger
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -29,18 +29,18 @@ export class AuthService {
     @InjectRepository(RefreshToken)
     private refreshTokensRepository: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * ثبت‌نام کاربر جدید
    */
-  async register(registerDto: RegisterDto): Promise<{ 
-    user: Partial<User>; 
-    accessToken: string; 
-    refreshToken: string; 
+  async register(registerDto: RegisterDto): Promise<{
+    user: Partial<User>;
+    accessToken: string;
+    refreshToken: string;
   }> {
     this.logger.log(`Register attempt for email: ${registerDto.email}`);
-    
+
     // بررسی وجود کاربر با ایمیل یا نام کاربری مشابه
     const existingUser = await this.usersRepository.findOne({
       where: [
@@ -90,13 +90,13 @@ export class AuthService {
   /**
    * ورود کاربر
    */
-  async login(loginDto: LoginDto): Promise<{ 
-    user: Partial<User>; 
-    accessToken: string; 
-    refreshToken: string; 
+  async login(loginDto: LoginDto): Promise<{
+    user: Partial<User>;
+    accessToken: string;
+    refreshToken: string;
   }> {
     this.logger.log(`Login attempt for: ${loginDto.email || loginDto.username}`);
-    
+
     const user = await this.usersRepository.findOne({
       where: [
         { email: loginDto.email || '' },
@@ -121,12 +121,12 @@ export class AuthService {
 
     // بررسی پسورد
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
-    
+
     if (!isPasswordValid) {
       // افزایش شمارنده ورود ناموفق
       user.failedLoginAttempts += 1;
       await this.usersRepository.save(user);
-      
+
       this.logger.warn(`Failed login attempt for user: ${user.id}. Attempts: ${user.failedLoginAttempts}`);
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -179,7 +179,7 @@ export class AuthService {
 
     // ذخیره پسورد فعلی به عنوان آخرین پسورد
     user.lastPasswordHash = user.passwordHash;
-    
+
     // هش کردن پسورد جدید
     user.passwordHash = await bcrypt.hash(changePasswordDto.newPassword, this.SALT_ROUNDS);
     user.passwordChangedAt = new Date();
@@ -194,14 +194,14 @@ export class AuthService {
   /**
    * ریفرش توکن
    */
-  async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<{ 
-    accessToken: string; 
-    refreshToken: string; 
+  async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<{
+    accessToken: string;
+    refreshToken: string;
   }> {
     const tokenRecord = await this.refreshTokensRepository.findOne({
-      where: { 
-        token: refreshTokenDto.refreshToken, 
-        isRevoked: false 
+      where: {
+        token: refreshTokenDto.refreshToken,
+        isRevoked: false
       },
       relations: ['user'],
     });
@@ -255,9 +255,9 @@ export class AuthService {
   /**
    * تولید access و refresh token
    */
-  private async generateTokens(user: User): Promise<{ 
-    accessToken: string; 
-    refreshToken: string; 
+  private async generateTokens(user: User): Promise<{
+    accessToken: string;
+    refreshToken: string;
   }> {
     const payload = {
       sub: user.id,
@@ -267,7 +267,6 @@ export class AuthService {
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_SECRET,
       expiresIn: process.env.JWT_EXPIRATION || '1d',
     });
 
@@ -295,13 +294,13 @@ export class AuthService {
    * پاکسازی اطلاعات حساس کاربر
    */
   private sanitizeUser(user: User): Partial<User> {
-    const { 
-      passwordHash, 
-      twoFactorSecret, 
+    const {
+      passwordHash,
+      twoFactorSecret,
       recoveryCodes,
       lastPasswordHash,
       passwordChangedAt,
-      ...sanitizedUser 
+      ...sanitizedUser
     } = user;
     return sanitizedUser;
   }
@@ -310,7 +309,7 @@ export class AuthService {
    * تأیید ایمیل
    */
   async verifyEmail(userId: string): Promise<void> {
-    const result = await this.usersRepository.update(userId, { 
+    const result = await this.usersRepository.update(userId, {
       isVerified: true,
       kycStatus: 'PENDING' // بعد از تأیید ایمیل، KYC در حالت pending قرار می‌گیرد
     });
@@ -318,7 +317,7 @@ export class AuthService {
     if (result.affected === 0) {
       throw new BadRequestException('User not found');
     }
-    
+
     this.logger.log(`Email verified for user: ${userId}`);
   }
 
@@ -326,11 +325,11 @@ export class AuthService {
    * درخواست ریست پسورد
    */
   async requestPasswordReset(email: string): Promise<{ resetToken: string }> {
-    const user = await this.usersRepository.findOne({ 
+    const user = await this.usersRepository.findOne({
       where: { email },
       withDeleted: true, // حتی اگر کاربر حذف منطقی شده باشد
     });
-    
+
     if (!user) {
       // برای امنیت، حتی اگر کاربر وجود نداشته باشد پیام موفقیت بده
       this.logger.log(`Password reset requested for non-existent email: ${email}`);
@@ -349,9 +348,9 @@ export class AuthService {
     // در entity فعلی فیلد reset token نداریم، باید اضافه کنیم یا جایگزین کنیم
     // فعلاً لاگ می‌کنیم
     this.logger.log(`Password reset token generated for ${email}: ${resetToken}`);
-    
+
     // TODO: ارسال ایمیل با لینک ریست
-    
+
     return { resetToken };
   }
 
@@ -372,14 +371,14 @@ export class AuthService {
     // TODO: پیاده‌سازی منطق کامل ریست پسورد
     // فعلاً فقط لاگ می‌کنیم
     this.logger.log(`Password reset with token: ${resetToken}`);
-    
+
     // در production باید:
     // 1. اعتبارسنجی توکن
     // 2. پیدا کردن کاربر
     // 3. تغییر پسورد
     // 4. باطل کردن توکن‌های قدیمی
     // 5. ارسال تأییدیه
-    
+
     throw new BadRequestException('Password reset not fully implemented yet');
   }
 
@@ -404,9 +403,9 @@ export class AuthService {
   async updateProfile(userId: string, updateData: Partial<User>): Promise<Partial<User>> {
     // حذف فیلدهای غیرقابل ویرایش
     const { id, email, passwordHash, isActive, isVerified, userType, ...allowedUpdates } = updateData;
-    
+
     const result = await this.usersRepository.update(userId, allowedUpdates);
-    
+
     if (result.affected === 0) {
       throw new BadRequestException('User not found or no changes made');
     }

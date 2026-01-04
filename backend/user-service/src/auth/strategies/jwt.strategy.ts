@@ -1,4 +1,4 @@
-﻿import { Injectable, UnauthorizedException } from '@nestjs/common';
+﻿import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -9,58 +9,48 @@ import { User } from '../../entities/user.entity';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  private readonly logger = new Logger(JwtStrategy.name);
+
   constructor(
     private configService: ConfigService,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
   ) {
+    const secret = configService.get<string>('JWT_SECRET');
+    console.log('🔐 JWT_SECRET from config:', secret ? 'SET' : 'NOT SET');
+    
     super({
-      jwtFromRequest: ExtractJwt.fromExtractors([
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
-        ExtractJwt.fromUrlQueryParameter('token'),
-      ]),
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
-      issuer: 'crypto-exchange',
-      audience: 'crypto-users',
+      secretOrKey: secret,
+      // issuer و audience را حذف کردیم تا با توکن‌های موجود سازگار باشد
     });
+    
+    this.logger.log('JWT Strategy initialized successfully');
   }
 
   async validate(payload: any): Promise<any> {
+    console.log('🔍 JwtStrategy.validate() called with payload:', payload);
+    
+    const userId = payload.sub;
+    
     const user = await this.usersRepository.findOne({
-      where: { id: payload.sub, isActive: true },
-      select: [
-        'id', 'email', 'username', 'firstName', 'lastName',
-        'phoneNumber', 'isActive', 'isVerified', 'is2faEnabled',
-        'userType', 'lastLoginAt', 'createdAt', 'updatedAt',
-        'kycStatus', 'dailyWithdrawalLimit', 'monthlyTradeLimit'
-      ]
+      where: { id: userId, isActive: true },
+      select: ['id', 'email', 'username', 'isActive', 'isVerified']
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found or account is inactive');
     }
 
-    // اگر 2FA فعال است، بررسی کن که payload حاوی 2FA claim باشد
-    if (user.is2faEnabled && !payload.is2faVerified) {
-      throw new UnauthorizedException('2FA verification required');
-    }
-
-    // اگر حساب تأیید نشده باشد (در موارد خاص)
-    if (!user.isVerified && payload.requireVerification !== false) {
-      throw new UnauthorizedException('Email verification required');
-    }
-
-    // payload نهایی
+    console.log('✅ User validated:', user.email);
+    
     return {
       sub: user.id,
       email: user.email,
       username: user.username,
-      userType: user.userType,
       isVerified: user.isVerified,
-      is2faEnabled: user.is2faEnabled,
-      kycStatus: user.kycStatus,
-      ...payload // سایر claims از توکن اصلی
+      ...payload
     };
   }
 }

@@ -13,7 +13,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, RefreshToken]),
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    PassportModule.register({ defaultStrategy: 'jwt', session: false }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -30,4 +30,4 @@ import { RefreshToken } from './entities/refresh-token.entity';
   providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtModule],
 })
-export class AuthModule { }
+export class AuthModule {}

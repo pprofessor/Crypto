@@ -1,7 +1,6 @@
 ﻿import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtModule } from '@nestjs/jwt';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -15,7 +14,7 @@ import jwtConfig from './config/jwt.config';
       isGlobal: true,
       load: [databaseConfig, jwtConfig],
     }),
-
+    
     // Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -28,17 +27,15 @@ import jwtConfig from './config/jwt.config';
         database: configService.get<string>('database.database'),
         schema: configService.get<string>('database.schema', 'crypto'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get<string>('TYPEORM_SYNCHRONIZE') === 'true' ||
-          configService.get<string>('NODE_ENV') === 'development',
-        logging: configService.get<string>('TYPEORM_LOGGING') === 'true' ||
-          configService.get<string>('NODE_ENV') === 'development',
+        synchronize: configService.get<string>('TYPEORM_SYNCHRONIZE') === 'true',
+        logging: configService.get<string>('TYPEORM_LOGGING') === 'true',
         migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
         migrationsRun: false,
         autoLoadEntities: true,
       }),
       inject: [ConfigService],
     }),
-
+    
     // Feature modules
     AuthModule,
     UsersModule,
@@ -46,4 +43,4 @@ import jwtConfig from './config/jwt.config';
   controllers: [],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}
