@@ -21,7 +21,7 @@ tracing-subscriber = "0.3"
 thiserror = "1.0"
 validator = { version = "0.16", features = ["derive"] }
 # اضافه کردن وابستگی برای پرداخت‌های ارزی
-tron-rs = "0.3"            # برای اتصال به شبکه TRON
+# tron-rs = "0.3"            # برای اتصال به شبکه TRON - TODO: بررسی مجدد نام یا منبع کریت
 web3 = "0.18"              # برای اتصال به Ethereum/BSC
 hex = "0.4"                # برای تبدیل هگزادسیمال
 bigdecimal = "0.4"         # برای محاسبات دقیق مالی

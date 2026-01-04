@@ -2,30 +2,46 @@
 name = "wallet-service"
 version = "0.1.0"
 edition = "2021"
-description = "Cryptocurrency wallet management service"
-authors = ["Crypto Options Exchange Team"]
+description = "A secure cryptocurrency wallet management microservice"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = "4.4"          # Web framework for Rust
-serde = { version = "1.0", features = ["derive"] } # Serialization/deserialization
-serde_json = "1.0"         # JSON handling
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls"] } # Async PostgreSQL driver
-tokio = { version = "1.35", features = ["full"] } # Async runtime
-uuid = { version = "1.6", features = ["v4", "serde"] } # UUID generation
-chrono = { version = "0.4", features = ["serde"] } # Date and time handling
-dotenv = "0.15"            # Environment variable loading
-config = "0.13"            # Configuration management
-tracing = "0.1"            # Structured logging
-tracing-subscriber = "0.3" # Logging subscriber
-thiserror = "1.0"          # Error handling utilities
-validator = { version = "0.16", features = ["derive"] } # Input validation
+actix-web = "4.0"
+actix-rt = "2.0"
+tokio = { version = "1.0", features = ["full"] }
+sqlx = { version = "0.7", features = [
+    "postgres",
+    "runtime-tokio-rustls",
+    "uuid",
+    "chrono",
+] } # حذف bigdecimal
+dotenvy = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+config = "0.13"
+hex = "0.4"
+thiserror = "1.0"
+async-trait = "0.1"
 
 [dev-dependencies]
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "migrate"] }
-testcontainers = "0.15"    # For integration testing with containers
+# Test utilities
+sqlx = { version = "0.7", features = [
+    "postgres",
+    "runtime-tokio-rustls",
+    "uuid",
+    "chrono",
+    "bigdecimal",
+    "migrate",
+] }
+wiremock = "0.5"
+testcontainers = "0.15" # Linting (اختیاری، برای کیفیت کد)
+# rustfmt = "1.0"
 
 [profile.release]
 opt-level = 3

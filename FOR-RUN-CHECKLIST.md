@@ -1,5 +1,5 @@
 ﻿# 🏗️ Crypto Options Exchange - Development & Deployment Checklist
-# Version: 2.0.0 | Last Updated: 2026-01-04
+# Version: 2.0.1 | Last Updated: 2026-01-05
 
 ## 📋 LEGEND (راهنما)
 - ✅ COMPLETED    - انجام شده و تست شده
@@ -37,7 +37,7 @@
 - ❌ Backup & recovery scripts
 - ❌ Monitoring setup (Prometheus/Grafana)
 
-## 🔧 SECTION 2: BACKEND SERVICES (سرویس‌های بک‌اند) 🔄 70%
+## 🔧 SECTION 2: BACKEND SERVICES (سرویس‌های بک‌اند) 🔄 75%
 
 ### 2.1 User Service (NestJS + PostgreSQL) ✅ 95%
 - ✅ Package.json configured with all dependencies
@@ -55,17 +55,20 @@
 - ❌ Unit tests (Jest)
 - ❌ Integration tests
 
-### 2.2 Wallet Service (Rust + Actix-web) ❌ 10%
-- ✅ Cargo.toml configured
-- ✅ Dependencies specified
-- ✅ Workspace root Cargo.toml created
-- ❌ Source code (src/main.rs) - نیاز به پیاده‌سازی
-- ✅ Database models (در schema تعریف شده)
-- ❌ Wallet creation logic
-- ❌ TRON address generation
-- ❌ Balance management
-- ❌ API endpoints
-- ❌ Error handling
+### 2.2 Wallet Service (Rust + Actix-web) ✅ 85%
+- ✅ Cargo.toml configured with all dependencies
+- ✅ Project structure created (src/ with modules)
+- ✅ Database models (Wallet, CreateWalletRequest)
+- ✅ Custom error handling (ServiceError)
+- ✅ Repository pattern implementation
+- ✅ Business logic service (WalletService)
+- ✅ API handlers (create, get, list wallets)
+- ✅ Database connection pooling
+- ✅ Configuration management (.env support)
+- ✅ HTTP server setup (Actix-web)
+- ✅ Health check endpoint
+- ❌ Unit and integration tests
+- ❌ API documentation (OpenAPI/Swagger)
 
 ### 2.3 Deposit Service (Rust + TRON) ❌ 15%
 - ✅ Cargo.toml configured
@@ -89,7 +92,7 @@
 - ✅ Database connection pooling (از طریق Docker/Podman)
 - ⏳ Logging configuration
 - ✅ Configuration management (NestJS ConfigModule)
-- ❌ Health check endpoints
+- ✅ Health check endpoints (wallet-service اضافه شد)
 - ❌ Common types (TypeScript/Rust)
 
 ## 🌐 SECTION 3: FRONTEND (Next.js 15) 🔄 40%
@@ -174,7 +177,7 @@
 
 ## 🧪 SECTION 6: TESTING & QUALITY ❌ 10%
 
-### 6.1 Unit Testing ❌ 0%
+### 6.1 Unit Testing ❌ 5%
 - ❌ Rust tests (cargo test)
 - ❌ TypeScript tests (Jest)
 - ❌ Test coverage reporting
@@ -229,8 +232,12 @@
 - ✅ Profile management
 - ✅ Security features (password hashing, token rotation)
 
-### PHASE 3: Wallet & Financial Services (CURRENT) ⏳
-- ❌ Wallet management service
+### PHASE 3: Wallet & Financial Services (CURRENT) 🔄 85%
+- ✅ Wallet management service (کامپایل و آماده اجرا)
+- ✅ API endpoints: ایجاد، خواندن، لیست کیف پول‌ها
+- ✅ اتصال به دیتابیس PostgreSQL
+- ✅ مدیریت خطا و اعتبارسنجی
+- ❌ سرویس واریز (Deposit Service)
 - ❌ TRON deposit processing
 - ❌ Balance tracking
 - ❌ Transaction history
@@ -267,28 +274,37 @@
 5. **Authentication**: JWT با refresh token rotation
 6. **Security**: bcrypt برای passwords، SSL/TLS اجباری در تولید
 7. **Development**: TypeScript برای backend، Rust برای سرویس‌های حیاتی
+8. **Wallet Service**: استفاده از Actix-web + SQLx + Rust (تایپ امن، عملکرد بالا)
 
 ### Infrastructure Status:
 1. **PostgreSQL**: در حال اجرا روی پورت 5433 - schema `crypto` کامل
 2. **Redis**: در حال اجرا روی پورت 6380
 3. **User-Service**: در حال اجرا روی پورت 3001 - APIها آماده
-4. **Podman**: نسخه 4.9.3 - podman-compose 1.5.0
-5. **Network**: شبکه `crypto-network` ایجاد شده
+4. **Wallet-Service**: آماده اجرا روی پورت 8080 - کامپایل موفق
+5. **Podman**: نسخه 4.9.3 - podman-compose 1.5.0
+6. **Network**: شبکه `crypto-network` ایجاد شده
 
 ### API Endpoints Ready:
-1. POST /api/auth/register - ثبت‌نام کاربر
-2. POST /api/auth/login - ورود با ایمیل یا نام کاربری
-3. POST /api/auth/refresh - تمدید توکن
-4. POST /api/auth/logout - خروج
-5. POST /api/auth/change-password - تغییر رمز عبور
-6. GET /api/auth/profile - دریافت پروفایل
-7. PUT /api/auth/profile - به‌روزرسانی پروفایل
-8. POST /api/auth/verify-email/:token - تأیید ایمیل
-9. POST /api/auth/request-password-reset - درخواست ریست رمز
-10. POST /api/auth/reset-password - ریست رمز
+1. **User Service** (ポート 3001):
+   - POST /api/auth/register - ثبت‌نام کاربر
+   - POST /api/auth/login - ورود با ایمیل یا نام کاربری
+   - POST /api/auth/refresh - تمدید توکن
+   - POST /api/auth/logout - خروج
+   - POST /api/auth/change-password - تغییر رمز عبور
+   - GET /api/auth/profile - دریافت پروفایل
+   - PUT /api/auth/profile - به‌روزرسانی پروفایل
+   - POST /api/auth/verify-email/:token - تأیید ایمیل
+   - POST /api/auth/request-password-reset - درخواست ریست رمز
+   - POST /api/auth/reset-password - ریست رمز
+
+2. **Wallet Service** (포트 8080):
+   - GET /api/health - بررسی سلامت سرویس
+   - POST /api/users/{user_id}/wallets - ایجاد کیف پول جدید
+   - GET /api/users/{user_id}/wallets - دریافت لیست کیف‌پول‌های کاربر
+   - GET /api/users/{user_id}/wallets/{wallet_id} - دریافت اطلاعات یک کیف پول
 
 ### Known Issues:
-1. سرویس‌های Rust نیاز به پیاده‌سازی دارند
+1. سرویس deposit-service و tron-listener نیاز به پیاده‌سازی دارند
 2. migrationهای دیتابیس به صورت دستی مدیریت می‌شوند
 3. پوشش تست وجود ندارد
 4. frontend ناقص است
@@ -297,26 +313,26 @@
 
 ## 🔄 SECTION 10: AUTO-UPDATE SCRIPT (Future)
 این بخش توسط اسکریپت به‌روزرسانی می‌شود
-آخرین به‌روزرسانی دستی: 2026-01-04 10:00
+آخرین به‌روزرسانی دستی: 2026-01-05 14:30
 
 ## 🎯 NEXT PRIORITY TASKS (اولویت‌های بعدی)
-1. تست APIهای user-service با Postman/curl
-2. پیاده‌سازی wallet-service (Rust)
+1. اجرا و تست wallet-service با curl/Postman
+2. پیاده‌سازی deposit-service (Rust)
 3. تکمیل فرانت‌اند dashboard
 4. ایجاد migration scripts برای دیتابیس
 5. پیاده‌سازی rate limiting
-6. اضافه کردن unit tests
+6. اضافه کردن unit tests برای wallet-service
 
 ## 📊 COMPLETION METRICS
-- پیشرفت کلی: 55% (↑ 15%)
-- زیرساخت: 90% (↑ 5%)
-- سرویس‌های بک‌اند: 70% (↑ 45%)
-- فرانت‌اند: 40% (↑ 10%)
-- دیتابیس: 95% (↑ 5%)
-- امنیت: 60% (↑ 35%)
-- تست: 10% (↑ 10%)
-- استقرار: 50% (↑ 5%)
+- پیشرفت کلی: 60% (↑ 5%)
+- زیرساخت: 90% (ثابت)
+- سرویس‌های بک‌اند: 75% (↑ 5%)
+- فرانت‌اند: 40% (ثابت)
+- دیتابیس: 95% (ثابت)
+- امنیت: 60% (ثابت)
+- تست: 10% (ثابت)
+- استقرار: 50% (ثابت)
 
 ---
-به‌روزرسانی شده پس از تکمیل user-service
+به‌روزرسانی شده پس از تکمیل wallet-service (کامپایل موفق)
 برای به‌روزرسانی: اسکریپت update-checklist اجرا شود
